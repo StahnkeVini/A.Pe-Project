@@ -40,7 +40,7 @@ metricas_sessao = {
     "tokens_poupados_estimados": 0
 }
 
-def processar_comando_jarvis(texto_usuario: str) -> str:
+def processar_comando_atlas(texto_usuario: str) -> str:
     inicio = time.perf_counter()
     cmd = texto_usuario.lower().strip()
     metricas_sessao["comandos_totais"] += 1
@@ -120,7 +120,7 @@ def processar_comando_jarvis(texto_usuario: str) -> str:
     taxa_economia = round((metricas_sessao["resolvidos_zero_token"] / metricas_sessao["comandos_totais"]) * 100, 1)
 
     print("\n" + "="*65)
-    print(f"[TELEMETRIA JARVIS] Rota: {rota_usada}")
+    print(f"[TELEMETRIA ATLAS] Rota: {rota_usada}")
     print(f"[LATÊNCIA] {latencia_ms} ms | [ECONOMIA DE API] {taxa_economia}% resolvidos localmente (~{metricas_sessao['tokens_poupados_estimados']} tokens poupados)")
     print("="*65)
 
