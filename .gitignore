@@ -1,0 +1,12 @@
+# Segurança máxima: NUNCA subir chaves de API
+.env
+
+# Ignorar ambiente virtual e caches do Python
+venv/
+__pycache__/
+*.pyc
+
+# Ignorar arquivos temporários de mídia do ATLAS
+*.mp3
+*.wav
+visao_atual.png
