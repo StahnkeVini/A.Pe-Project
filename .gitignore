@@ -1,3 +1,6 @@
+# Arquivos locais e modelos personalizados (não enviar por padrão ao Git)
+models/*.onnx
+
 # Segurança máxima: NUNCA subir chaves de API
 .env
 
