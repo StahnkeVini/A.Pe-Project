@@ -18,6 +18,15 @@ from voice_engine import falar_texto
 load_dotenv()
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
+# CONFIGURAÇÕES DE DESEMPENHO DA VISÃO
+
+VISION_MODEL = "gemini-3.5-flash-lite"
+
+VISION_RESOLUTION = types.MediaResolution.MEDIA_RESOLUTION_MEDIUM
+
+VISION_THINKING_LEVEL = "low"
+
+
 SYSTEM_PROMPT = (
     "Você é A.T.L.A.S. (Agente de Tecnologia, Lógica, Automação e Sistemas), "
     "um sistema operacional agêntico avançado. "
@@ -96,23 +105,111 @@ def processar_comando_atlas(texto_usuario: str) -> str:
     # =========================================================================
     # TIER 2: VISÃO MULTIMODAL + FEEDBACK SONORO 3B (GEMINI 3.8 FLASH)
     # =========================================================================
-    elif any(gatilho in cmd for gatilho in ("minha tela", "olhe isso", "analise a tela", "erro na tela", "o que está na tela", "olhe minha tela")):
-        rota_usada = "TIER 2 (Visão Multimodal - gemini-3.8-flash)"
-        
+        # TIER 2: VISÃO MULTIMODAL OTIMIZADA
+    elif any(gatilho in cmd for gatilho in (
+        "minha tela",
+        "olhe isso",
+        "analise a tela",
+        "erro na tela",
+        "o que está na tela",
+        "olhe minha tela"
+    )):
+
+        rota_usada = f"TIER 2 (Visão - {VISION_MODEL})"
+
+        inicio_visao = time.perf_counter()
+
+        # 1. Confirmação por voz
+        inicio_ack = time.perf_counter()
+
         falar_texto("Analisando sua tela agora, senhor.")
-        
+
+        ack_ms = (time.perf_counter() - inicio_ack) * 1000
+
+        # 2. Captura da tela
+        inicio_captura = time.perf_counter()
+
         caminho_img = capturar_tela_para_visao()
-        imagem = Image.open(caminho_img)
-        
+
+        captura_ms = (time.perf_counter() - inicio_captura) * 1000
+
+        tamanho_kb = os.path.getsize(caminho_img) / 1024
+
+        # 3. Preparação da imagem
+        inicio_abertura = time.perf_counter()
+
+        with Image.open(caminho_img) as imagem_aberta:
+            imagem = imagem_aberta.convert("RGB")
+
+        abertura_ms = (time.perf_counter() - inicio_abertura) * 1000
+
+        # 4. Ajuste de raciocínio
+        termos_complexos = (
+            "detalhadamente",
+            "análise profunda",
+            "debug",
+            "depure",
+            "investigue",
+            "compare"
+        )
+
+        nivel_raciocinio = (
+            "medium"
+            if any(t in cmd for t in termos_complexos)
+            else VISION_THINKING_LEVEL
+        )
+
+        # 5. Envio para Gemini
+        inicio_api = time.perf_counter()
+
         response = client.models.generate_content(
-            model="gemini-3.8-flash",
+            model=VISION_MODEL,
             contents=[imagem, texto_usuario],
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
-                temperature=0.3
+                media_resolution=VISION_RESOLUTION,
+                thinking_config=types.ThinkingConfig(
+                    thinking_level=nivel_raciocinio
+                )
             )
         )
-        resposta_final = response.text
+
+        api_ms = (time.perf_counter() - inicio_api) * 1000
+
+        resposta_final = (
+            response.text
+            or "Não consegui extrair uma resposta da análise visual."
+        )
+
+        # 6. Métricas
+        total_ms = (time.perf_counter() - inicio_visao) * 1000
+
+        usage = getattr(response, "usage_metadata", None)
+
+        print("\n" + "=" * 65)
+        print("[ATLAS VISÃO - TELEMETRIA]")
+        print(f"Modelo: {VISION_MODEL}")
+        print(f"Raciocínio: {nivel_raciocinio}")
+        print(f"Confirmação por voz: {ack_ms:.1f} ms")
+        print(f"Captura da tela: {captura_ms:.1f} ms")
+        print(f"Preparação da imagem: {abertura_ms:.1f} ms")
+        print(f"Tamanho da imagem: {tamanho_kb:.1f} KB")
+        print(f"Tempo da API Gemini: {api_ms:.1f} ms")
+        print(f"Tokens de pensamento: "
+    f"{getattr(usage, 'thoughts_token_count', 'N/D')}")
+        print(f"Tempo total: {total_ms:.1f} ms")
+
+        if usage:
+            print(
+                f"Tokens de entrada: "
+                f"{getattr(usage, 'prompt_token_count', 'N/D')}"
+            )
+            print(
+                f"Tokens de saída: "
+                f"{getattr(usage, 'candidates_token_count', 'N/D')}"
+            )
+
+        print("=" * 65)
 
     # =========================================================================
     # TIER 1: AGENTE COM CHAT AFC E MEMÓRIA (GEMINI 3.5 FLASH-LITE)

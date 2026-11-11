@@ -83,13 +83,23 @@ def diagnosticar_hardware() -> str:
     return f"CPU em {cpu} por cento. Memória RAM usando {ram_usada_gb} gigas de {ram_total_gb} gigas."
 
 def capturar_tela_para_visao() -> str:
-    """Tira um print da tela, redimensiona para otimizar a velocidade e salva."""
-    caminho = "visao_atual.png"
+    """Captura a tela e salva uma versão JPEG otimizada."""
+    caminho = "visao_atual.jpg"
+
     screenshot = pyautogui.screenshot()
-    
-    # Redimensiona para HD (1280x720) mantendo a proporção para acelerar o upload multimodal
     screenshot.thumbnail((1280, 720))
-    screenshot.save(caminho, optimize=True, quality=85)
+
+    if screenshot.mode != "RGB":
+        screenshot = screenshot.convert("RGB")
+
+    screenshot.save(
+        caminho,
+        format="JPEG",
+        quality=88,
+        optimize=False,
+        progressive=False
+    )
+
     return caminho
 
 LISTA_FERRAMENTAS_PC = [
